@@ -1,4 +1,4 @@
-#include "device_id.h"
+#include "ArduinoLowPower.h"
 #include "utils.h"
 #include "Timer.hpp"
 
@@ -39,11 +39,6 @@ constexpr uint8_t g_battery_pin = A6;
 uint8_t g_battery_val = 0;
 
 ////////////////////////////////////////////////////////////////////////////////
-// forward declared functions
-
-void parse_line(char *the_line);
-
-template <typename T> void process_input(T& the_device);
 
 void blink_status_led();
 
@@ -129,7 +124,7 @@ void setup()
     digitalWrite(13, HIGH);
 
     // while(!Serial){ blink_status_led(); }
-    Serial.begin(115200);
+    Serial.begin(9600);
 
     // battery measuring
     g_timer[TIMER_BATTERY_MEASURE].set_callback([]()
@@ -180,6 +175,16 @@ void loop()
     g_time_accum += delta_time;
     g_time_accum_params += delta_time;
 
+    float next_timer_event = 10.f;
+
     // poll Timer objects
-    for(uint32_t i = 0; i < NUM_TIMERS; ++i){ g_timer[i].poll(); }
+    for(uint32_t i = 0; i < NUM_TIMERS; ++i)
+    {
+         g_timer[i].poll();
+         next_timer_event = min(next_timer_event, g_timer[i].expires_from_now());
+    }
+
+    // wake up 2ms before next event
+    int sleepDuration = max(next_timer_event * 1000 - 2, 0);
+    LowPower.idle(sleepDuration);
 }
